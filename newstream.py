@@ -1,147 +1,392 @@
+import re
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os.path
+import csv
 
-# Placeholder function for getting tempo, replace with actual implementation
-def get_tempo(name):
-    # Replace with your actual implementation
-    return random.randint(80, 160)
+m3u_filepaths_file = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists/streamlit.m3u8'
+m3u_filepaths_file_two = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists/streamlit_two.m3u8'
+m3u_filepaths_similar = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists/streamlit_similar.csv'
 
-# Placeholder function for getting key, replace with actual implementation
-def get_key(name):
-    # Replace with your actual implementation
-    keys = ['C Major', 'C# Major', 'D Major', 'D# Major', 'E Major', 'F Major', 'F# Major', 'G Major', 'G# Major', 'A Major', 'A# Major', 'B Major']
-    return random.choice(keys)
+audio_file_path = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/audio'
+similar_songs_csv_path = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists/similar_songs.csv'
 
-# Placeholder function for loading analysis data, replace with actual implementation
-def load_analysis():
-    # Replace with your actual implementation to load analysis data
-    return pd.DataFrame({
-        'song_title': ['Song 1', 'Song 2', 'Song 3', 'Song 4', 'Song 5'],
-        'tempo': [120, 140, 100, 160, 130],
-        'key': ['C', 'D', 'E', 'F', 'G'],
-        'valence': [0.5, 0.7, 0.3, 0.8, 0.6],
-        'acousticness': [0.1, 0.3, 0.2, 0.4, 0.5],
-        'danceability': [0.6, 0.8, 0.4, 0.9, 0.7],
-        'duration_ms': [200000, 220000, 180000, 240000, 210000],
-        'energy': [0.7, 0.8, 0.6, 0.9, 0.75],
-        'instrumentalness': [0.05, 0.1, 0.02, 0.15, 0.08],
-        'liveness': [0.1, 0.2, 0.05, 0.3, 0.15],
-        'loudness': [-5, -4, -6, -3, -4.5],
-        'mode': [1, 0, 1, 0, 1],
-        'speechiness': [0.05, 0.1, 0.03, 0.12, 0.08]
-    })
+essentia_analysis = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/data/files_essentia_effnet-discogs.jsonl.pickle'
+
+# Paths
+bpm_path = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/data/songs_metadata.csv'
+
+# features_df = pd.read_csv(file_path)
+bpm_data = pd.read_csv(bpm_path)
+
+def analysis_from_essentia():
+    return pd.read_pickle(essentia_analysis)
+
+audio_analysis = analysis_from_essentia()
+
+def get_mp3s_bpm(mp3_name):
+    mp3s_bpm = bpm_data[bpm_data['path'].str.endswith(mp3_name)]
+    if not mp3s_bpm.empty:
+        bpm_value = mp3s_bpm['bpm'].values[0]
+        st.write(f"BPM value of '{mp3_name}': {bpm_value}")
+        return bpm_value
+    else:
+        st.write(f"No BPM data found for '{mp3_name}'")
+        return None
+    
+# def get_similar_songs(mp3_name, bpm_data, bpm_range=0.05, output_file=None):
+#     # Filter songs from songs_metadata.csv with paths ending with mp3_name
+#     mp3s_bpm = bpm_data[bpm_data['path'].str.endswith(mp3_name)]
+
+#     if not mp3s_bpm.empty:
+#         # Extract BPM value of the inputted MP3
+#         input_bpm = mp3s_bpm['bpm'].values[0]
+#         st.write(f"BPM value of '{mp3_name}': {input_bpm}")
+        
+#         # Filter songs from audio_analysis with BPM close to the inputted MP3
+#         similar_songs = bpm_data[
+#             (bpm_data['bpm'] >= input_bpm - bpm_range) & 
+#             (bpm_data['bpm'] <= input_bpm + bpm_range)
+#         ]
+        
+#         similar_songs = similar_songs.sort_values(by='bpm', ascending=False)
+
+#         if output_file:
+#             similar_songs.to_csv(output_file, index=False)
+#             st.write(f"Similar songs saved to '{output_file}'")
+
+#         return similar_songs
+#     else:
+#         st.write(f"No BPM data found for '{mp3_name}'")
+#         return None
+
+def get_similar_songs(mp3_name, bpm_data, bpm_range=0.05, output_file=None):
+    # Filter songs from songs_metadata.csv with paths ending with mp3_name
+    mp3s_bpm = bpm_data[bpm_data['path'].str.endswith(mp3_name)]
+
+    if not mp3s_bpm.empty:
+        # Extract BPM value of the inputted MP3
+        input_bpm = mp3s_bpm['bpm'].values[0]
+        st.write(f"BPM value of '{mp3_name}': {input_bpm}")
+        
+        # Filter songs from audio_analysis with BPM close to the inputted MP3
+        similar_songs = bpm_data[
+            (bpm_data['bpm'] >= input_bpm - bpm_range) & 
+            (bpm_data['bpm'] <= input_bpm + bpm_range)
+        ]
+        
+        similar_songs = similar_songs.sort_values(by='bpm', ascending=False)
+
+        if output_file:
+            similar_songs.to_csv(output_file, index=False)
+            st.write(f"Similar songs saved to '{output_file}'")
+
+        return similar_songs
+    else:
+        st.write(f"No BPM data found for '{mp3_name}'")
+        return None
+
+def save_similar_songs(similar_songs, output_file):
+    output_file = os.path.join('..', output_file)
+    if not similar_songs.empty:
+        similar_songs.to_csv(output_file, index=False)
+        st.write(f"Similar songs saved to '{output_file}'")
+    else:
+        st.write("No similar songs found.")
+
+def save_similar_songs_to_m3u(similar_songs, output_file):
+    with open(output_file, 'w') as f:
+        mp3s = [os.path.join('..', mp3) for mp3 in similar_songs]
+        f.write('\n'.join(mp3s))
+        st.write(f'Stored M3U playlist (local filepaths) to `{output_file}`.')
+
+def save_paths_to_csv(paths, output_file):
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Audio Paths'])
+        writer.writerows([[path] for path in paths])
+        st.write(f'Stored CSV file with paths to `{output_file}`.')
+
+# def format_path(path):
+#     with open(similar_songs_csv_path, 'r') as f:
+#         lines = f.readlines()[1:]
+
+#     formatted_lines = [f"audio/{line.strip()}" for line in lines]
+
+#     with open(similar_songs_csv_path, 'w') as f:
+#         f.writelines(formatted_lines)
+
+    # mp3s = [path.replace('audio/', '') for path in formatted_lines]
+    # for mp3 in mp3s[:10]:
+        # st.audio(mp3, format="audio/mp3", start_time=0)
+    # file_name = path.split('/')[-1]
+    # audio_file_path = '/'.join(path.split('/')[:-1])
+    # new_path = f"audio/{audio_file_path}/{file_name}"
+    # match = re.search(r'audio/(.*)\.mp3', path)
+    # if match:
+    #     return match.group(1)
+    # else:
+    #     return None
+    
+def format_paths_from_csv(csv_file_path):
+    formatted_paths = []
+    with open(csv_file_path, 'r') as f:
+        # Read the CSV file
+        reader = csv.reader(f)
+        header = next(reader)  # Read the header
+        # Append the header to the formatted paths
+        # formatted_paths.append(header[0])
+        for row in reader:
+            # Extract the path
+            path = row[0]
+            # Extract only the filename
+            filename = path.split('/')[-1]
+            # Format the path
+            formatted_path = f"{filename}"
+            formatted_paths.append(formatted_path)
+    
+    # Write the formatted lines back to the same CSV file
+    with open(csv_file_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows([[path] for path in formatted_paths])
+    
+    return formatted_paths
+
+def find_mp3_folders(similar_songs_csv_path, audio_directory):
+    # Read similar songs CSV to get list of filenames
+    with open(similar_songs_csv_path, 'r') as f:
+        reader = csv.reader(f)
+        filenames = [row[0] for row in reader]
+
+    # List to store the paths of matching folders
+    matching_folders = []
+
+    # Iterate over each filename and search for its corresponding folder in the audio directory
+    for filename in filenames:
+        for root, dirs, files in os.walk(audio_directory):
+            for file in files:
+                if file == filename:
+                    matching_folders.append(root)
+                    break
+
+    return matching_folders
+
+def gather_relative_paths(matching_folders, audio_directory):
+    relative_paths = []
+    # Iterate over each matching folder
+    for folder in matching_folders:
+        # Get the relative path of the folder from the audio directory
+        relative_path = os.path.relpath(folder, audio_directory)
+        # Append the relative path to the list
+        relative_paths.append(relative_path)
+    return relative_paths
+
+def join_paths(relative_paths, mp3_names):
+    joined_paths = []
+    for relative_path, mp3_name in zip(relative_paths, mp3_names):
+        joined_path = os.path.join(relative_path, mp3_name)
+        joined_paths.append(joined_path)
+    return joined_paths
+
+def write_joined_paths_to_csv(joined_paths, output_file):
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows([['audio/' + path] for path in joined_paths])
+    st.write(f'Joined paths saved to `{output_file}`.')
+
+def generate_m3u8_from_csv(csv_file, output_dir):
+    mp3_paths = []
+    with open(csv_file, 'r') as f:
+        # Read each line and extract the path
+        for line in f:
+            mp3_paths.append(line.strip())
+
+    output_file = os.path.join(output_dir, 'similar_songs.m3u8')
+
+    # Write the MP3 paths to the M3U8 file
+    with open(output_file, 'w') as f:
+        f.write('#EXTM3U\n')
+        for mp3 in mp3_paths:
+            relative_path = os.path.relpath(mp3, output_dir)
+            f.write(relative_path + '\n')
+    print(f'M3U8 playlist saved to `{output_file}`.')
+
+
+
+st.write("Loaded audio moreeee analysis data:", audio_analysis)
+# print_pickle_data(essentia_analysis)
+st.write(f'Using analysis data from `{essentia_analysis}`.')
+st.write('Loaded audio analysis for', len(audio_analysis), 'tracks.')
+
+st.write(audio_analysis.describe())
+
+
+audio_classes = audio_analysis.columns
+select_class = st.multiselect('Select class:', audio_classes)
+
+if select_class:
+    st.write(audio_analysis[select_class].describe())
+
+    select_class_str = ', '.join(select_class)
+    select_class_range = st.slider(f'Select tracks with `{select_class_str}` activations within range:', value=[0.0, 1.])
+
+# To rank by selected genre(class)
+st.write('Checking by genre')
+class_check = st.multiselect('Check by genre activations:', audio_classes, [])
+
+# For post-processing options
+st.write('Post-process')
+MAX_SONGS = st.number_input("Maximum number of songs: (default is 0)", value=0)
+
 
 # Initialize session state
-if 'searched_song_features' not in st.session_state:
-    st.session_state.searched_song_features = None
+if 'selected_bpm' not in st.session_state:
+    st.session_state.selected_bpm = None
 
 # Streamlit app title and information
 st.title('Audio Features Extractor')
 st.write('This app searches for songs based on name/title and finds similar songs based on various features.')
 
-# Load CSV data
-file_path = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/data/data.csv'
-features_df = pd.read_csv(file_path)
 
-# Display columns of the dataframe
-st.write("Columns:", features_df.columns)
 
 # Search for a specific song by name/title
+# Is the run button pressed
+
+st.write("MP3 Bpm Extractor...")
+st.write("Retrieving BPM value of the searched song......")
+
+
 user_input = st.text_input('Enter the name/title of a song to search:')
+
+
+
 if st.button('Search'):
-    if user_input:
-        # Filter songs based on user input
-        matching_songs = features_df[features_df['name'].str.contains(user_input, case=False)]
-        if not matching_songs.empty:
-            st.write('Matching songs:')
-            st.write(matching_songs)
+    st.write('Searching for songs...')
+    mp3s = list(audio_analysis.index)
 
-            # Select a song from the list
-            selected_song = st.selectbox('Select a song:', matching_songs['name'])
+    # get_mp3s_bpm(user_input)
 
-            # Store the selected song's features in session state
-            st.session_state.searched_song_features = matching_songs[matching_songs['name'] == selected_song].iloc[0]
-            st.write('Stored features of the searched song:')
-            st.write(st.session_state.searched_song_features)
+    audio_file = os.listdir(audio_file_path)
+    audio_titles = [os.path.splitext(audio_file)[0] for audio_file in audio_file]
 
-            # Update selected tempo and key based on the selected song
-            selected_tempo_value = st.session_state.searched_song_features['tempo']
-            selected_key_value = st.session_state.searched_song_features['key']
+    st.write("Still searching......")
 
-# Display similar songs based on the selected song and specified features
-if st.session_state.searched_song_features is not None:
-    # Display feature description of the searched song
-    st.write('Feature description of the searched song:')
-    st.write(st.session_state.searched_song_features)
+    # bpm_value = get_mp3s_bpm(user_input)
 
-    # Find similar songs based on specified features
-    selected_song_features = st.session_state.searched_song_features
-    st.write('Selected song features:')
-    st.write(selected_song_features)
+    output_directory = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists'
+    similar_songs = get_similar_songs(user_input, bpm_data,output_file=os.path.join(output_directory, 'similar_songs.csv'))
 
-    # Set default value for tempo slider based on the selected song
-    selected_tempo = selected_song_features['tempo']
+    # Specify the full path to the CSV file
+    formatted_paths = format_paths_from_csv(similar_songs_csv_path)
 
-    # Display tempo slider with default value
-    selected_tempo = st.slider('Select tempo range (BPM):', min_value=0, max_value=200, value=int(selected_tempo))
+    matching_folders = find_mp3_folders(similar_songs_csv_path, audio_file_path)
 
-    # Get all unique keys from the dataset
-    keys = features_df['key'].unique().tolist()
+    relative_paths = gather_relative_paths(matching_folders, audio_file_path)
 
-    # Set default value for key selector based on the selected song
-    selected_key = selected_song_features['key']
+    joined_paths = join_paths(relative_paths, formatted_paths)
 
-    # Display key selector with default value
-    selected_key_index = keys.index(selected_key) if selected_key in keys else 0
-    selected_key = st.selectbox('Select key:', keys, index=selected_key_index)
+    st.write("Formatted paths: ")
+    for path in formatted_paths:
+        st.write(path)
+
+    st.write("Matching folders: ")
+    for folder in matching_folders:
+        st.write(folder)
+
+    st.write("Relative paths: ")
+    for path in relative_paths:
+        st.write(path)
+
+    st.write("Joined paths: ")
+    for path in joined_paths:
+        st.write(path)
+
+    output_file = os.path.join(output_directory, 'similar_songs.csv')
+    write_joined_paths_to_csv(joined_paths, output_file)
 
 
-    # Display sliders for additional features
-    selected_valence = st.slider('Select valence:', min_value=0.0, max_value=1.0, value=selected_song_features['valence'])
-    selected_acousticness = st.slider('Select acousticness:', min_value=0.0, max_value=1.0, value=selected_song_features['acousticness'])
-    selected_danceability = st.slider('Select danceability:', min_value=0.0, max_value=1.0, value=selected_song_features['danceability'])
-    # selected_duration_ms = st.slider('Select duration (ms):', min_value=0, max_value=500000, value=selected_song_features['duration_ms'])
-    selected_energy = st.slider('Select energy:', min_value=0.0, max_value=1.0, value=selected_song_features['energy'])
-    selected_instrumentalness = st.slider('Select instrumentalness:', min_value=0.0, max_value=1.0, value=selected_song_features['instrumentalness'])
-    selected_liveness = st.slider('Select liveness:', min_value=0.0, max_value=1.0, value=selected_song_features['liveness'])
-    # Convert selected loudness to an integer
-    selected_loudness_value = int(selected_song_features['loudness'])
-    selected_loudness = st.slider('Select loudness:', min_value=-60, max_value=0, value=selected_loudness_value)
-    selected_mode = st.slider('Select mode:', min_value=0, max_value=1, value=selected_song_features['mode'])
-    selected_speechiness = st.slider('Select speechiness:', min_value=0.0, max_value=1.0, value=selected_song_features['speechiness'])
+    if similar_songs is not None:
+        st.write("Similar songs based on BPM range:")
+        st.write(similar_songs)
+        # save_similar_songs_to_m3u(similar_songs['path'], m3u_filepaths_similar)
 
 
-    # Debugging: Print selected tempo and key
-    st.write('Selected tempo:', selected_tempo)
-    st.write('Selected key:', selected_key)
-    st.write('Selected valence:', selected_valence)
-    st.write('Selected acousticness:', selected_acousticness)
-    st.write('Selected danceability:', selected_danceability)
-    # st.write('Selected duration (ms):', selected_duration_ms)
-    st.write('Selected energy:', selected_energy)
-    st.write('Selected instrumentalness:', selected_instrumentalness)
-    st.write('Selected liveness:', selected_liveness)
-    st.write('Selected loudness:', selected_loudness)
-    st.write('Selected mode:', selected_mode)
-    st.write('Selected speechiness:', selected_speechiness)
+    # if bpm_value is not None:
+    #         df = pd.DataFrame({'user_input': [user_input], 'bpm_value': [bpm_value]})
+    #         st.write('DF with fetched BPM value:')
+    #         st.write(df)
+            
 
-    # Filter songs based on selected features
-    similar_songs = features_df.copy()  # Make a copy to avoid modifying the original dataframe
-    similar_songs = similar_songs[(similar_songs['valence'] >= selected_valence)]
-    similar_songs = similar_songs[(similar_songs['acousticness'] >= selected_acousticness)]
-    similar_songs = similar_songs[(similar_songs['danceability'] >= selected_danceability)]
-    # similar_songs = similar_songs[(similar_songs['duration_ms'] >= selected_duration_ms)]
-    similar_songs = similar_songs[(similar_songs['energy'] >= selected_energy)]
-    similar_songs = similar_songs[(similar_songs['instrumentalness'] >= selected_instrumentalness)]
-    similar_songs = similar_songs[(similar_songs['liveness'] >= selected_liveness)]
-    similar_songs = similar_songs[(similar_songs['loudness'] >= selected_loudness)]
-    similar_songs = similar_songs[(similar_songs['mode'] == selected_mode)]
-    similar_songs = similar_songs[(similar_songs['speechiness'] >= selected_speechiness)]
+    
+    # Filter by genre
+    if select_class:
+        analysis_query = audio_analysis.loc[mp3s][select_class]
+        result_of_query = analysis_query
+        for style in select_class:
+            result_of_query = result_of_query[result_of_query[style] >= select_class_range[0]]
+            result_of_query = result_of_query[result_of_query[style] <= select_class_range[1]]
+        st.write(result_of_query)
+        mp3s = result_of_query.index
 
-    # Debugging: Print the number of similar songs found
-    st.write('Number of similar songs found:', len(similar_songs))
+    # Rank by genre
+    if class_check:
+        analysis_query = audio_analysis.loc[mp3s][class_check]
+        analysis_query['RANK'] = analysis_query[class_check[0]]
+        for style in class_check[1:]:
+            analysis_query['RANK'] *= analysis_query[style]
+
+        ranked = analysis_query.sort_values('RANK', ascending=False)
+        ranked = ranked[['RANK'] + class_check]
+        mp3s = list(ranked.index)
+
+        st.write('Appplied genres')
+        st.write(ranked)
+
+    if MAX_SONGS:
+        mp3s = mp3s[:MAX_SONGS]
+        st.write('Showing top', len(mp3s), 'songs')
+
+    with open(m3u_filepaths_file, 'w') as f:
+        mp3_paths = [os.path.join('..', mp3) for mp3 in mp3s]
+        f.write('\n'.join(mp3_paths))
+        st.write(f'Stored M3U playlist (local filepaths) to `{m3u_filepaths_file}`.')
+
+    # Saves the songs but to csv rather than m3u
+    with open (m3u_filepaths_similar, 'w') as f:
+        mp3_paths = [os.path.join('..', mp3) for mp3 in similar_songs['path']]
+        for mp3 in mp3s:
+            f.write(mp3 + '\n')
+        st.write(f'Stored M3U playlist (local filepaths) to `{m3u_filepaths_similar}`.')
+
+    # st.write(f'Saving the genred MP3s to `{m3u_filepaths_similar}`...')
+
+    # save_paths_to_csv(mp3s, m3u_filepaths_file)
+
+    st.write('Does this work here? for genre')
+
+    st.write('Audio previews for the first ', MAX_SONGS,' results:')
+    for mp3 in mp3s[:15]:
+        st.audio(mp3, format="audio/mp3", start_time=0)
+
+    st.write('Still working???')
+
+    csv_file = '/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists/similar_songs.csv'
+    output_dir = "/home/xelreg/Documents/Capstone/EssentiaTutorial/MusicRecSys/playlists"
+    generate_m3u8_from_csv(csv_file, output_dir)
+
+
 
     # Display similar songs
     st.write('Similar songs based on selected features:')
     st.write(similar_songs)
+
+    
+
+
+    st.write("...........................")
+
+    
+
+    st.write('Still working again???')
+# 0lecBzcZyDFPE3CZWcqM68.mp3
