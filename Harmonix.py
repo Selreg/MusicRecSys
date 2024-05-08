@@ -29,7 +29,6 @@ def retrieve_genre_values(audio_file_paths, selected_styles, audio_genre_mapping
         if all(value_range[0] < value < value_range[1] for value in genre_values):
             print(f"{audio_file_path}: {', '.join(map(str, genre_values))}")
 
-
 def calculate_product(genre_values, style_rank):
     genre_values['RANK'] = genre_values[style_rank[0]]
     for style in style_rank[1:]:
@@ -211,8 +210,8 @@ if st.session_state.searched_song_features is not None:
 ]
 
   st.write('Found', len(similar_songs), 'similar songs:')
+  similar_songs = similar_songs
   st.write(similar_songs)
-
 
   # if len(similar_songs) > 0:
   #       # Store the M3U8 playlist.
