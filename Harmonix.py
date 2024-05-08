@@ -211,9 +211,8 @@ if st.session_state.searched_song_features is not None:
 ]
 
   st.write('Found', len(similar_songs), 'similar songs:')
-  # st.write(similar_songs)
-    similar_songs = similar_songs
-    st.write(similar_songs)
+  st.write(similar_songs)
+
 
   # if len(similar_songs) > 0:
   #       # Store the M3U8 playlist.
