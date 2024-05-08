@@ -136,8 +136,8 @@ if st.button('Recommend'):
   selected_song_features = st.session_state.searched_song_features['Valence']
 
 if st.session_state.searched_song_features is not None:
-  st.write('Feature description of the searched song:')
-  st.write(st.session_state.searched_song_features)
+  #st.write('Feature description of the searched song:')
+  #st.write(st.session_state.searched_song_features)
 
   selected_song_features = st.session_state.searched_song_features
   
