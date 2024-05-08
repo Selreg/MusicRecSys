@@ -77,7 +77,7 @@ classes = fetch_classes(json_link)
 #     st.success(f'Found {len(classes)} genre classes.')
 #     st.write(classes)
 
-PATH = 'processed.csv'
+PATH = 'data/processed.csv'
 
 GENRE_ANALYSIS = 'data/batch_train.csv'
 
