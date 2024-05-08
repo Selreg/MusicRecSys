@@ -77,11 +77,11 @@ classes = fetch_classes(json_link)
 #     st.success(f'Found {len(classes)} genre classes.')
 #     st.write(classes)
 
-PATH = '/home/xelreg/Documents/Capstone/Recommender/processed.csv'
+PATH = 'processed.csv'
 
-GENRE_ANALYSIS = '/home/xelreg/Documents/Capstone/Recommender/Smaller_data/data/batch_train.csv'
+GENRE_ANALYSIS = 'data/batch_train.csv'
 
-audio_directory = '/home/xelreg/Documents/Capstone/Recommender/Smaller_data/audio/renamedfma'
+audio_directory = '/audio/renamedfma'
 
 style_activation_data = load_analysis_data(GENRE_ANALYSIS)
 
