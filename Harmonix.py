@@ -59,9 +59,9 @@ st.subheader('Music Recommendation System', divider='rainbow')
     # st.write(classes)
 
 # Paths
-PATH = '/home/xelreg/Documents/Capstone/Recommender/processed.csv'
-GENRE_ANALYSIS = '/home/xelreg/Documents/Capstone/Recommender/Smaller_data/data/batch_train.csv'
-audio_directory = '/home/xelreg/Documents/Capstone/Recommender/Smaller_data/audio/renamed'
+PATH = 'data/processed.csv'
+GENRE_ANALYSIS = 'data/batch_train.csv'
+audio_directory = 'audio/renamed'
 
 # Load analysis data
 style_activation_data = load_analysis_data(GENRE_ANALYSIS)
