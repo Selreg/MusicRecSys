@@ -181,7 +181,7 @@ if st.session_state.searched_song_features is not None:
 
         # Display audio previews for top 10 tracks
         for track, rank in ranked_tracks:
-            track_filename = track.split('/')[-1].replace(" ", "_")
+            track_filename = track.split('/')[-1].replace(" ", "")
             mp3_filename = os.path.join(audio_directory, track_filename)
 
             if os.path.exists(mp3_filename):
